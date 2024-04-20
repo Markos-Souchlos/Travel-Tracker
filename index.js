@@ -26,13 +26,18 @@ app.get("/",async (req, res) => {
 
   var country = [];
   response.rows.forEach((obj) => country.push(obj.countrycode));
+  console.log(country);
   res.render("index.ejs", {countries: country, total: country.length});
 });
 
 app.post("/add",async (req,res) => {
   const country = req.body.country;
+  const lowerCaseCountry = country.toLowerCase();
 
-  const response = await db.query(`SELECT code FROM countries WHERE name = '${country}'`);
+  console.log("You entered: ",country);
+  const response = await db.query(`SELECT code FROM countries WHERE LOWER(name) LIKE '%${lowerCaseCountry}%' ORDER BY LENGTH(name) LIMIT 1`);
+  
+  console.log("Your response: ",response.rows);
   if (response.rows[0]!=undefined) {
     try {
       const command = `INSERT INTO visitedCountries (countryCode) VALUES ('${response.rows[0].code}');`;
@@ -40,7 +45,7 @@ app.post("/add",async (req,res) => {
       res.redirect("/");
     } catch (error) {
 
-      console.log("Country Already exists");
+      console.log("Country Already exists in database");
       const response = await db.query('SELECT countryCode FROM visitedCountries;');
 
       var countries = [];
@@ -53,6 +58,18 @@ app.post("/add",async (req,res) => {
       });
 
     }
+  } else {
+    console.log("Country not found");
+    const response = await db.query('SELECT countryCode FROM visitedCountries;');
+
+    var countries = [];
+    response.rows.forEach((obj) => countries.push(obj.countrycode));
+
+    res.render("index.ejs", {
+      countries: countries,
+      total: countries.length,
+      error: "This country does not exist. Try a different name"
+    });
   }
 });
 
